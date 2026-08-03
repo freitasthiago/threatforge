@@ -1477,7 +1477,7 @@ async function addIoc() {
   } catch (e) { toast(e.message, true); }
 }
 async function enrich(id) {
-  toast("Enriquecendo…");
+  toast("Enriching...");
   try {
     const o = await api("POST", `/observables/${id}/enrich`);
     if (o && o.enrichment_warnings && o.enrichment_warnings.length) {
@@ -1485,7 +1485,7 @@ async function enrich(id) {
       // Never a raw exception/HTTP error — the backend never sends that here.
       toast(o.enrichment_warnings.join(" "), true);
     } else {
-      toast("Enriquecido");
+      toast("Enriched");
     }
     await loadIocs();
   } catch (e) { toast(e.message, true); }
@@ -1494,17 +1494,17 @@ async function iocDetail(id) {
   try {
     const o = await api("GET", `/observables/${id}`);
     const factors = (o.score_factors || []).map(f =>
-      `<div class="factor"><b>+${esc(f.points)}</b> ${esc(f.reason)} <span class="muted">(${esc(f.source)})</span></div>`).join("") || '<span class="muted">Sem fatores. Enriqueça o IOC.</span>';
+      `<div class="factor"><b>+${esc(f.points)}</b> ${esc(f.reason)} <span class="muted">(${esc(f.source)})</span></div>`).join("") || '<span class="muted">No scoring factors yet. Enrich the IOC.</span>';
     $("#iocDetail").innerHTML = `<div class="panel" style="margin-top:14px">
       <b>${esc(o.value)}</b> — ${verdictCell(o.verdict)} score ${o.score}/100
       <div style="margin-top:8px">${factors}</div></div>`;
   } catch (e) { toast(e.message, true); }
 }
 async function syncFeeds() {
-  toast("Sincronizando KEV…");
+  toast("Syncing KEV...");
   try {
     const k = await api("POST", "/sync/kev");
-    toast(`KEV: ${k.items} CVEs. Sincronizando MITRE…`);
+    toast(`KEV: ${k.items} CVEs. Syncing MITRE...`);
     const mi = await api("POST", "/sync/mitre");
     toast(`Feeds OK — KEV ${k.items}, MITRE ${mi.items}`);
   } catch (e) { toast(e.message, true); }

@@ -32,6 +32,11 @@ def _friendly_source_failure(source: str) -> str:
     return f"Não foi possível consultar a fonte {label} no momento."
 
 
+def _friendly_source_skip(source: str) -> str:
+    label = _SOURCE_LABELS.get(source, source)
+    return f"The {label} source is not configured; enrichment was skipped."
+
+
 def _status_code_from(exc: Exception) -> int | None:
     """Best-effort extraction of an HTTP status code from a connector error
     (e.g. httpx.HTTPStatusError), without hard-depending on httpx types."""
@@ -137,6 +142,23 @@ def enrich_observable(observable_id: int, request: Request, db: Session = Depend
                 commit=False,
             )
             warnings.append(_friendly_source_failure(connector.name))
+            continue
+        # A connector may explicitly report that it was not executed (for
+        # example, because its API key is missing). That is not a successful
+        # negative lookup and must never be scored as NO_KNOWN_THREAT.
+        if isinstance(data, dict) and data.get("skipped") is True:
+            logger.info(
+                "Enrichment source skipped: source=%s observable_id=%s reason=%s",
+                connector.name, obs.id, data.get("reason"),
+            )
+            audit.record(
+                db, actor=principal.subject, actor_role=principal.role, tenant_id=tid,
+                action="enrichment.source_skipped", target_type="observable",
+                target_id=obs.id, request=request,
+                detail={"source": connector.name, "reason": data.get("reason")},
+                commit=False,
+            )
+            warnings.append(_friendly_source_skip(connector.name))
             continue
         results[connector.name] = data
         db.add(Enrichment(observable_id=obs.id, source=connector.name, data=data))

@@ -19,6 +19,39 @@ and the project aims to follow [Semantic Versioning](https://semver.org/spec/v2.
 - Additional Enterprise operational and reporting capabilities tracked in
   [`ROADMAP.md`](ROADMAP.md).
 
+## [0.11.1] — 2026-08-03 — IOC Enrichment Verdict and Status Hotfix
+### Fixed
+
+- Distinguished unavailable or unconfigured intelligence sources from
+  completed negative enrichment lookups.
+- Prevented skipped, empty, malformed or unrecognized connector results from
+  being classified as `no_known_threat`.
+- Returned `unknown` when no recognized intelligence source proves that a
+  lookup was executed.
+- Preserved positive scoring behavior for CISA KEV, EPSS and URLhaus results.
+- Normalized historical zero-score `no_known_threat` outcomes to `unknown`
+  when no successful negative lookup is present.
+- Added sanitized source-level warnings when enrichment is skipped.
+- Translated public IOC enrichment and KEV/MITRE synchronization status
+  messages to English.
+- Added regression coverage for skipped sources, explicit negative results,
+  positive scoring and historical verdict normalization.
+
+### Compatibility
+
+- No database migration is required.
+- Existing v0.11.0 migrations, Telegram contracts and historical release
+  documentation remain unchanged.
+- The Enterprise overlay remains on the `0.11.x` release train and requires
+  final compatibility acceptance against the release image before publication.
+
+### Validation
+
+- CI-equivalent application import validation.
+- Community tenant-isolation selftest.
+- Final container image and `/health` version validation.
+- IOC enrichment regression validation in the controlled POC.
+
 ## [0.11.0] — 2026-07-22 — Telegram Intelligence and Intelligence Workspace
 
 ### Added

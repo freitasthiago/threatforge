@@ -6,13 +6,21 @@ ThreatForge is an open source platform for Cyber Threat Intelligence, Digital Ri
 
 ## Release status
 
-**Current release: v0.11.0 — Community Preview** (AGPL-3.0-or-later).
+**Current release: v0.11.1 — Community Preview** (AGPL-3.0-or-later).
 This is a preview, not 1.0: feature-rich and tested, but schema/API/UI may still evolve before a stable 1.0.
 
-- Release notes: [`docs/RELEASE_NOTES_v0.11.0.md`](docs/RELEASE_NOTES_v0.11.0.md)
+- Release notes: [`docs/RELEASE_NOTES_v0.11.1.md`](docs/RELEASE_NOTES_v0.11.1.md)
 - Changelog: [`CHANGELOG.md`](CHANGELOG.md)
 - Roadmap (Community × Enterprise): [`ROADMAP.md`](ROADMAP.md)
 - Governance & maintainer: [`GOVERNANCE.md`](GOVERNANCE.md)
+
+### v0.11.1 — IOC Enrichment Verdict and Status Hotfix
+
+ThreatForge Community v0.11.1 corrects IOC enrichment semantics by
+distinguishing unavailable or skipped intelligence sources from completed
+negative lookups. It preserves positive scoring, normalizes unsupported
+zero-score outcomes to `unknown`, and presents public enrichment and feed
+synchronization messages in English.
 
 ### v0.11.0 — Telegram Intelligence and Intelligence Workspace
 
@@ -194,10 +202,10 @@ Validate the installation:
 curl http://localhost:8000/health
 ```
 
-Expected response (version tracks the current release, e.g. `0.10.1`):
+Expected response (version tracks the current release, e.g. `0.11.1`):
 
 ```json
-{"status":"ok","service":"threatforge","version":"0.10.1"}
+{"status":"ok","service":"threatforge","version":"0.11.1"}
 ```
 
 The API and UI will be available at:
@@ -519,12 +527,13 @@ The score is the sum of explainable factors, capped from 0 to 100.
 
 Verdicts:
 
-| Score | Verdict |
-|---:|---|
-| 70–100 | `malicious` |
-| 40–69 | `suspicious` |
-| 1–39 | `low` |
-| 0 | `no_known_threat` |
+| Condition | Verdict |
+|---|---|
+| Score 70–100 | `malicious` |
+| Score 40–69 | `suspicious` |
+| Score 1–39 | `low` |
+| Score 0 after a recognized source completed a negative lookup | `no_known_threat` |
+| No recognized source completed a lookup | `unknown` |
 
 ## Configuration
 
@@ -692,14 +701,16 @@ See [Public Readiness Check](docs/PUBLIC_READINESS_CHECK.md).
 
 ## Roadmap
 
-ThreatForge Community is currently published at **v0.11.0 Community Preview**.
+ThreatForge Community is currently prepared for **v0.11.1 Community Preview**.
+ThreatForge v0.11.1 corrects IOC enrichment verdict semantics and public
+status messages.
 ThreatForge v0.11.0 delivers Telegram Intelligence collection foundations, the provider-neutral Intelligence Workspace, source and collector observability, tenant-scoped correlation and dashboard integration.
 The historical v0.7/v0.8/v0.9 milestones and the first v0.10 operational review workflow backend slice have already landed on `main`.
 Future work is tracked in the canonical roadmap:
 
 - [ROADMAP.md](ROADMAP.md) — Community × Enterprise roadmap
 - [CHANGELOG.md](CHANGELOG.md) — completed milestones
-- [docs/RELEASE_NOTES_v0.10.1.md](docs/RELEASE_NOTES_v0.10.1.md) — current public preview release notes
+- [docs/RELEASE_NOTES_v0.11.1.md](docs/RELEASE_NOTES_v0.11.1.md) — current public preview release notes
 
 ## License
 

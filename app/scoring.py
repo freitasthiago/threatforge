@@ -17,18 +17,51 @@ class ScoreFactor:
 VERDICTS = [(70, "malicious"), (40, "suspicious"), (1, "low")]
 
 
+def _lookup_executed(name: str, data: object) -> bool:
+    """True only when a *recognized* connector presents explicit evidence that a
+    lookup actually ran and returned a result.
+
+    A skipped connector, ``None``, a non-dict, an empty dict, or an unrecognized
+    result shape is NOT proof that a lookup occurred and must never let an
+    observable be scored as ``no_known_threat``.
+    """
+    if not isinstance(data, dict):
+        return False
+    if data.get("skipped") is True:
+        return False
+    if name in ("cisa_kev", "urlhaus"):
+        return isinstance(data.get("listed"), bool)
+    if name == "epss":
+        return data.get("epss") is not None
+    return False
+
+
 def compute_score(enrichments: dict[str, dict | None]) -> tuple[int, str, list[dict]]:
-    """Recebe {nome_do_conector: dados} e devolve (score, verdict, fatores)."""
+    """Recebe {nome_do_conector: dados} e devolve (score, verdict, fatores).
+
+    Contrato:
+    - ``unknown``          : nenhuma fonte reconhecida comprovou consulta executada;
+    - ``no_known_threat``  : ao menos uma fonte reconhecida executou e retornou
+                             resultado negativo explícito.
+    """
+    executed = {
+        name: data
+        for name, data in enrichments.items()
+        if _lookup_executed(name, data)
+    }
+    if not executed:
+        return 0, "unknown", []
+
     factors: list[ScoreFactor] = []
 
-    kev = enrichments.get("cisa_kev")
+    kev = executed.get("cisa_kev")
     if kev and kev.get("listed"):
         factors.append(
             ScoreFactor(
                 "kev_listed",
                 50,
                 f"CVE is listed in the CISA KEV catalog (confirmed active exploitation). "
-                f"Adicionada em {kev.get('date_added')}.",
+                f"Added on {kev.get('date_added')}.",
                 "CISA KEV",
             )
         )
@@ -37,12 +70,12 @@ def compute_score(enrichments: dict[str, dict | None]) -> tuple[int, str, list[d
                 ScoreFactor(
                     "kev_ransomware",
                     10,
-                    "Uso conhecido em campanhas de ransomware segundo a CISA.",
+                    "Known use in ransomware campaigns according to CISA.",
                     "CISA KEV",
                 )
             )
 
-    epss = enrichments.get("epss")
+    epss = executed.get("epss")
     if epss and epss.get("epss") is not None:
         prob = float(epss["epss"])
         pts = round(prob * 30)
@@ -57,15 +90,15 @@ def compute_score(enrichments: dict[str, dict | None]) -> tuple[int, str, list[d
                 )
             )
 
-    uh = enrichments.get("urlhaus")
+    uh = executed.get("urlhaus")
     if uh and uh.get("listed"):
         if "url_status" in uh:  # consulta por URL
             factors.append(
                 ScoreFactor(
                     "urlhaus_url",
                     45,
-                    f"URL listada no URLhaus (ameaça: {uh.get('threat') or 'n/d'}, "
-                    f"tags: {', '.join(uh.get('tags') or []) or 'n/d'}).",
+                    f"URL listed in URLhaus (threat: {uh.get('threat') or 'N/A'}, "
+                    f"tags: {', '.join(uh.get('tags') or []) or 'N/A'}).",
                     "abuse.ch URLhaus",
                 )
             )
@@ -74,7 +107,7 @@ def compute_score(enrichments: dict[str, dict | None]) -> tuple[int, str, list[d
                     ScoreFactor(
                         "urlhaus_online",
                         10,
-                        "URL maliciosa ainda ONLINE no momento da consulta.",
+                        "Malicious URL was still ONLINE at query time.",
                         "abuse.ch URLhaus",
                     )
                 )
@@ -83,8 +116,8 @@ def compute_score(enrichments: dict[str, dict | None]) -> tuple[int, str, list[d
                 ScoreFactor(
                     "urlhaus_host",
                     35,
-                    f"Host associado a {uh.get('url_count', '?')} URL(s) de "
-                    f"malware distribution in URLhaus.",
+                    f"Host associated with {uh.get('url_count', '?')} malware-distribution "
+                    f"URL(s) in URLhaus.",
                     "abuse.ch URLhaus",
                 )
             )
@@ -93,14 +126,14 @@ def compute_score(enrichments: dict[str, dict | None]) -> tuple[int, str, list[d
                 ScoreFactor(
                     "urlhaus_payload",
                     45,
-                    f"Hash corresponde a payload conhecido no URLhaus "
-                    f"(assinatura: {uh.get('signature') or 'n/d'}).",
+                    f"Payload listed in URLhaus (file type: {uh.get('file_type')}, "
+                    f"signature: {uh.get('signature') or 'N/A'}).",
                     "abuse.ch URLhaus",
                 )
             )
 
     score = min(100, max(0, sum(f.points for f in factors)))
-    verdict = "no_known_threat"
+    verdict = "unknown"
     for threshold, name in VERDICTS:
         if score >= threshold:
             verdict = name
